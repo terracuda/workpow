@@ -10,9 +10,13 @@ $IPv4Regex = "^(?:$Octet\.){3}$Octet$"                                    # rege
 
 # Set the VM's names and IPV4 addresses as array (Network Adapters Only).
 $VMIPs = @()
+
+if ((get-vmnetworkadapter * | Where-Object { $_.ipaddresses -gt '0' }).ipaddresses -gt "1") 
+{
 $VMIPs += (get-vmnetworkadapter * | Where-Object { $_.ipaddresses -gt '0' }).ipaddresses -match $IPv4Regex
+}
 $VMNames = @()
-$VMNames += (get-vmnetworkadapter * | Where-Object { $_.ipaddresses -gt '0' }).VMName
+$VMNames += (get-vmnetworkadapter * | Where-Object { $_.status -eq 'Ok' }).VMName
 
 # Set the VM's names and IPV4 addresses as array (Workaround for legacy Network Adapters).
 $VMLMacs = @()
