@@ -1,7 +1,7 @@
-﻿# Variables
+# Set some variables
 
-$GUsername = Tester                                                       # guest machine username
-$GPass = test                                                             # guest machine user password
+$GUsername = 'Tester'                                                     # guest machine username
+$GPass = 'test'                                                           # guest machine user password
 $Desktop = "C:\Users\Administrator\Desktop\"                              # path to save the RDP profiles (Desktop by default)
 $SRCpath = "D:\workspace\script\source.rdp"                               # path to RDP source profile
 $Octet = '(?:0?0?[0-9]|0?[1-9][0-9]|1[0-9]{2}|2[0-5][0-5]|2[0-4][0-9])'   # regex for IP V4 filter
