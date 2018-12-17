@@ -41,8 +41,11 @@ cmdkey /generic:TERMSRV/$VMIP /user:$GUsername /pass:$GPass | Out-Null
 # Create the RDP profiles for each VM on Desktop, based on the pattern RDP file.
 Get-Content $SRCpath | out-file $Desktop\$VMName.rdp
 
-# Add the current IPV4 address to each created profile.
+# Add the assigned IPV4 address to each created profile.
 Write-Output "full address:s:$VMIP" | out-file $Desktop\$VMName.rdp -append
+
+# Add the Guest Machine's username to each created profile.
+Write-Output "username:s:$GUsername" | out-file $Desktop\$VMName.rdp -append
 
 echo "--------------------------------"
 echo $VMIP $VMName
