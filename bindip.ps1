@@ -1,5 +1,4 @@
-# Set some variables
-
+               # Set some variables
 $GUsername = 'Tester'                                                     # guest machine username
 $GPass = 'test'                                                           # guest machine user password
 $Desktop = "C:\Users\Administrator\Desktop\"                              # path to save the RDP profiles (Desktop by default)
@@ -7,52 +6,68 @@ $SRCpath = "D:\workspace\script\source.rdp"                               # path
 $Octet = '(?:0?0?[0-9]|0?[1-9][0-9]|1[0-9]{2}|2[0-5][0-5]|2[0-4][0-9])'   # regex for IP V4 filter
 $IPv4Regex = "^(?:$Octet\.){3}$Octet$"                                    # regex for IP V4 filter
 
-
-# Set the VM's names and IPV4 addresses as array (Network Adapters Only).
+               # Clean the old array values
 $VMIPs = @()
-
-if ((get-vmnetworkadapter * | Where-Object { $_.ipaddresses -gt '0' }).ipaddresses -gt "1") 
-{
-$VMIPs += (get-vmnetworkadapter * | Where-Object { $_.ipaddresses -gt '0' }).ipaddresses -match $IPv4Regex
-}
 $VMNames = @()
-$VMNames += (get-vmnetworkadapter * | Where-Object { $_.status -eq 'Ok' }).VMName
-
-# Set the VM's names and IPV4 addresses as array (Workaround for legacy Network Adapters).
 $VMLMacs = @()
-$VMLMacs += (get-vmnetworkadapter * | Where-Object { $_.name -eq 'Legacy Network Adapter' -and $_.Status -eq 'Ok' }).MacAddress
+               
+               # Detect how many VMs are running with Network Adapters and Legacy Network Adapters.
+$LNAVMS = (get-vmnetworkadapter * | Where-Object { $_.name -eq 'Legacy Network Adapter' -and $_.Status -eq 'Ok' })
+$NAVMS = (get-vmnetworkadapter * | Where-Object { $_.name -eq 'Network Adapter' -and $_.Status -eq 'Ok' })                           
+$LNAVMScount = ($LNAVMS).count
+$NAVMScount = ($NAVMS).count
+$VMTotcount = $LNAVMScount + $NAVMScount
 
-if ($VMLMacs -gt "1") 
+               # In case when VMs with LNA are running - collect the IP-addresses using the ARP table and names.
+  if ($LNAVMScount -gt 0) 
 {
-#Changing the MACs fomrats.
+               # Collect the MAC addresses for VMs with Legacy Network Adapters.
+$VMLMacs += ($LNAVMS).MacAddress
+
+               #Changing the MACs formats.
 $VMLMacs = $VMLMacs -replace '..(?!$)', '$&-'
 
 $VMIPs += (Get-NetNeighbor | Where-Object { $_.LinkLayerAddress -eq $VMLMacs -and $_.State -ne 'Stale' }).IPAddress
-$VMNames += (get-vmnetworkadapter * | Where-Object { $_.name -eq 'Legacy Network Adapter' -and $_.Status -eq 'Ok' }).VMName
+$VMNames += ($LNAVMS).VMName
 }
 
-echo "Connection links and rules were created for the following VMs:"
+               # In case when VMs with Network Adapters are running - collect the IP-addresses and names.
+  if ($NAVMScount -gt 0)              
+{
+$VMIPs += ($NAVMS).ipaddresses -match $IPv4Regex
 
-for ($i=0; $i -lt $VMIPs.Count; $i++)
+$VMNames += ($NAVMS).VMName
+}
+
+ if ($VMTotcount -gt 0)
+{
+
+echo "Connection links and rules were created for the following VMs:"
+  for ($i=0; $i -lt $VMTotcount; $i++)
 {
 
 $VMIP = $VMIPs[$i]
 $VMName = $VMNames[$i]
 
-# Create the appropriate records in Windows Credential Manager. This should help to enter the VM's user credentials automatically.
+               # Create the appropriate records in Windows Credential Manager. This should help to enter the VM's user credentials automatically.
 cmdkey /generic:TERMSRV/$VMIP /user:$GUsername /pass:$GPass | Out-Null
 
-# Create the RDP profiles for each VM on Desktop, based on the pattern RDP file.
+               # Create the RDP profiles for each VM on Desktop, based on the pattern RDP file.
 Get-Content $SRCpath | out-file $Desktop\$VMName.rdp
 
-# Add the assigned IPV4 address to each created profile.
+               # Add the assigned IPV4 address to each created profile.
 Write-Output "full address:s:$VMIP" | out-file $Desktop\$VMName.rdp -append
 
-# Add the Guest Machine's username to each created profile.
+               # Add the Guest Machine's username to each created profile.
 Write-Output "username:s:$GUsername" | out-file $Desktop\$VMName.rdp -append
 
 echo "--------------------------------"
 echo $VMIP $VMName
 
-
 }
+exit
+}
+
+echo "Sorry, no running VMs were detected"
+
+exit
